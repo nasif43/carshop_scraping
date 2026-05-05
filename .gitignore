@@ -1,0 +1,4 @@
+carshop_scraper.db
+env/
+__pycache__/
+carshop_inventory.jsonl
