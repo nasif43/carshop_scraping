@@ -1,9 +1,10 @@
 import time
 import random
 import json
+import os
 from curl_cffi import requests
 from curl_cffi.requests.exceptions import ConnectionError, Timeout, HTTPError
-from config import ALGOLIA_HEADERS, IMPEL_HEADERS, RIDEMOTIVE_HEADERS, DELAY_MIN, DELAY_MAX, ALGOLIA_ENDPOINT, ALGOLIA_APP_ID, ALGOLIA_API_KEY, ALGOLIA_INDEX
+from config import ALGOLIA_HEADERS, IMPEL_HEADERS, RIDEMOTIVE_HEADERS, DELAY_MIN, DELAY_MAX, ALGOLIA_ENDPOINT, ALGOLIA_APP_ID, ALGOLIA_API_KEY, ALGOLIA_INDEX, ALGOLIA_CACHE_DIR
 
 # Impersonation targets for rotation (only supported versions)
 # Common supported: chrome99, chrome100, chrome101, chrome104, chrome107, chrome110, chrome116, chrome119, chrome120, chrome123, chrome124
@@ -82,10 +83,30 @@ def long_break():
     print(f"Taking a longer break for {break_time:.1f}s to avoid detection...")
     time.sleep(break_time)
 
-def fetch_algolia_page(page=0, user_token=None):
+def fetch_algolia_page(page=0, user_token=None, use_cache=True, fresh_fetch=False):
     if user_token is None:
         from config import generate_user_token
         user_token = generate_user_token()
+
+    # Setup cache
+    os.makedirs(ALGOLIA_CACHE_DIR, exist_ok=True)
+    cache_file = os.path.join(ALGOLIA_CACHE_DIR, f"page_{page}.json")
+
+    # Try to load from cache if caching is enabled and not forcing fresh fetch
+    if use_cache and not fresh_fetch and os.path.exists(cache_file):
+        try:
+            with open(cache_file, 'r', encoding='utf-8') as f:
+                cached_data = json.load(f)
+            # Validate cache has required fields
+            if "hits" in cached_data and "nbPages" in cached_data:
+                print(f"Loading Algolia page {page} from cache")
+                return cached_data, False
+        except (json.JSONDecodeError, IOError):
+            # Corrupted cache, delete and fetch fresh
+            os.remove(cache_file)
+
+    # Fetch from API
+    print(f"Fetching Algolia page {page} from API")
 
     payload = {
         "query": "",
@@ -107,7 +128,17 @@ def fetch_algolia_page(page=0, user_token=None):
         headers=headers,
         json_data=payload
     )
-    return response.json()
+    data = response.json()
+
+    # Save to cache if caching is enabled
+    if use_cache:
+        try:
+            with open(cache_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False)
+        except IOError as e:
+            print(f"Warning: Failed to cache Algolia page {page}: {e}")
+
+    return data, True
 
 def fetch_impel_details(vin):
     # Impel API requires lowercase VIN

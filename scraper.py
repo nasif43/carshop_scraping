@@ -7,13 +7,12 @@ from config import DELAY_MIN, DELAY_MAX, OUTPUT_FILE
 # Take a longer break every N vehicles
 LONG_BREAK_INTERVAL = 10
 
-def scrape_algolia_all_pages(max_pages=None, max_hits=None):
+def scrape_algolia_all_pages(max_pages=None, max_hits=None, use_cache=True, fresh_fetch=False):
     all_hits = []
     page = 0
 
     while True:
-        print(f"Fetching Algolia page {page}...")
-        data = fetch_algolia_page(page)
+        data, is_fresh = fetch_algolia_page(page, use_cache=use_cache, fresh_fetch=fresh_fetch)
         hits = data.get("hits", [])
         all_hits.extend(hits)
 
@@ -29,7 +28,8 @@ def scrape_algolia_all_pages(max_pages=None, max_hits=None):
         if max_hits and len(all_hits) >= max_hits:
             all_hits = all_hits[:max_hits]
             break
-        random_delay()
+        if is_fresh:
+            random_delay()
 
     return all_hits
 
@@ -89,11 +89,11 @@ def save_to_jsonl(vehicles, output_file=OUTPUT_FILE):
             f.write(json.dumps(vehicle, ensure_ascii=False) + "\n")
     print(f"Saved {len(vehicles)} vehicles to {output_file}")
 
-def run_scraper(max_pages=1, max_vehicles=None):
+def run_scraper(max_pages=1, max_vehicles=None, use_cache=True, fresh_fetch=False):
     from database import init_db
     init_db()
 
-    hits = scrape_algolia_all_pages(max_pages=max_pages, max_hits=max_vehicles)
+    hits = scrape_algolia_all_pages(max_pages=max_pages, max_hits=max_vehicles, use_cache=use_cache, fresh_fetch=fresh_fetch)
     print(f"Total hits fetched: {len(hits)}")
 
     vehicles_saved = 0

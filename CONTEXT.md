@@ -52,6 +52,28 @@
 6. Fix all bugs (DELAY_MIN/MAX, LONG_BREAK_INTERVAL, listing_url removal) ✅
 7. Ready for full scrape (41 pages, ~1442 vehicles) ✅
 8. Created concurrent version (scraper_concurrent.py) for speed testing on VPS ✅
+9. Implemented Algolia page caching to avoid redundant API calls ✅
+
+## Caching Implementation (2026-05-06)
+- **Algolia Page Cache**: Stores Algolia API responses in `algolia_cache/page_{n}.json`
+  - Eliminates redundant API calls on subsequent runs
+  - No delays applied when loading from cache (only on fresh API fetches)
+  - Cache directory: `algolia_cache/`
+- **CLI Flags**:
+  - `--no-algolia-cache`: Disables caching entirely
+  - `--fresh-algolia`: Forces fresh API fetches, overwriting cache
+- **Speed Impact**: Saves ~80-200s per full run (41 pages × 2-5s delays eliminated when using cache)
+- **Anti-Scraping Compliance**: Fewer total requests = lower risk of rate limiting/blocking
+
+## Data Conversion (2026-05-06)
+- **Script**: `convert_to_airtable.py` converts `carshop_inventory.jsonl` to Airtable-compatible CSV
+- **Output**: `carshop_inventory_airtable.csv` (drag-and-drop ready for Airtable import)
+- **Features**:
+  - Flattens nested JSON objects/arrays to CSV columns
+  - Removes redundant internal fields (17+ fields removed)
+  - Logical column ordering (Core Identity → Pricing → Media → Specs → Features → Dealership)
+  - Handles comma-containing fields automatically via CSV quoting
+- **Usage**: `python convert_to_airtable.py` (re-run after scraper finishes for full dataset)
 
 ## Critical Workflow Rule
 **ALWAYS read this file first when starting work in this directory:**

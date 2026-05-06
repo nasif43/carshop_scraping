@@ -17,6 +17,7 @@ ALGOLIA_HEADERS = {
 }
 
 ALGOLIA_HITS_PER_PAGE = 36
+ALGOLIA_CACHE_DIR = "algolia_cache"
 ALGOLIA_FILTERS = (
     "is_active:true AND dealer_ids:\"429\" AND "
     "dealership:\"CarShop Hatfield\"<score=3> OR "
